@@ -81,27 +81,35 @@ public class OrdersServiceImpl extends ServiceImpl<OrdersMapper, Orders> impleme
 
 
 
-
-        orders.setId (orderId);
+        orders.setId(orderId);
         orders.setOrderTime(LocalDateTime.now());
         orders.setCheckoutTime(LocalDateTime.now());
         orders.setStatus(2);
-        orders.setAmount (new BigDecimal(amount.get() ));
-        orders.setUserId (userId);//订单总金额
+        orders.setAmount(new BigDecimal(amount.get()));//总金额
+        orders.setUserId(userId);
         orders.setNumber(String.valueOf(orderId));
+        orders.setUserName(user.getName());
+        orders.setConsignee(addressBook.getConsignee());
+        orders.setPhone(addressBook.getPhone());
+        orders.setAddress((addressBook.getProvinceName() == null ? "" : addressBook.getProvinceName())
+                + (addressBook.getCityName() == null ? "" : addressBook.getCityName())
+                + (addressBook.getDistrictName() == null ? "" : addressBook.getDistrictName())
+                + (addressBook.getDetail() == null ? "" : addressBook.getDetail()));
+        orders.setId (orderId);
 
-        orders.setUserName (user.getName () );
-        orders.setConsignee(addressBook.getConsignee ( ) );
-        orders.setPhone (addressBook.getPhone());
-        orders.setAddress ( (addressBook.getProvinceName() == null ? "" : addressBook.getProvinceName())
-                +(addressBook.getCityName () == null ? "" : addressBook.getCityName())
-                +(addressBook.getDistrictName () == null ? "" :addressBook.getDistrictName ())
-                +(addressBook.getDetail() == null ? "" : addressBook.getDetail()));
         //向订单表插入数据，一条数据
 
 
-        this.save (orders) ;
+
+        //---------------------------
+
+        //向订单表插入数据，一条数据
+        this.save(orders);
+
+        //向订单明细表插入数据，多条数据
         orderDetailService.saveBatch(orderDetails);
+
+        //清空购物车数据
         shoppingCartService.remove(wrapper);
         return R.success("成功");
     }

@@ -65,10 +65,10 @@ public class DishController {
         return dishService.deleteDish(idsList);
     }
 
-    // http://localhost/dish/list?categoryId=1397844263642378242 GET 根据种类获取菜
+    // http://localhost/dish/list?categoryId=1397844391040167938&status=1 GET 根据种类获取菜
     @GetMapping("/list")
-    public R<List<DishDto>> SetmealList(@PathParam("categoryId") Long categoryId) {
-        return dishService.SetmealList(categoryId);
+    public R<List<DishDto>> SetmealList(@PathParam("categoryId") Long categoryId, @PathParam("status") Integer status) {
+        return dishService.SetmealList(categoryId, status);
     }
 
 

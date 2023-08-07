@@ -8,6 +8,7 @@ import com.xiaofei.reggie.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpRequest;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -25,7 +26,9 @@ public class UserController {
     @Qualifier("userServiceImpl")
     @Autowired
     private UserService userService;
-
+    @Qualifier("redisTemplate")
+    @Autowired
+    private RedisTemplate redis;
     //http://localhost/user/login POST
     @PostMapping("/sendMsg")
     public R<String> userSendMsg(@RequestBody User user, HttpServletRequest request){

@@ -31,5 +31,5 @@ public interface DishService extends IService<Dish> {
 
     List<R<DishDto>> getOneDishDto(Long id);
 
-    R<List<DishDto>> SetmealList(Long categoryId);
+    R<List<DishDto>> SetmealList(Long categoryId, Integer status);
 }

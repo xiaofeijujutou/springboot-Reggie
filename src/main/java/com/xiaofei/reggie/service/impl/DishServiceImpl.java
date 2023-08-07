@@ -1,6 +1,7 @@
 package com.xiaofei.reggie.service.impl;
 
 
+import com.alibaba.fastjson.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -18,12 +19,15 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cglib.beans.BeanCopier;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 
@@ -37,7 +41,9 @@ public class DishServiceImpl extends ServiceImpl<DishMapper, Dish> implements Di
     @Qualifier("categoryServiceImpl")
     @Autowired
     private CategoryService categoryService;
-
+    @Qualifier("stringRedisTemplate")
+    @Autowired
+    private RedisTemplate redis;
     @Override
     @Transactional
     public R<String> add(DishDto dishDto) {
@@ -58,6 +64,11 @@ public class DishServiceImpl extends ServiceImpl<DishMapper, Dish> implements Di
             return item;
         }).collect(Collectors.toList());
         dishFlavorService.saveBatch(flavors);
+
+        Set keys = redis.keys("dish_*");
+        redis.delete(keys);
+//        String key = "dish" + dishDto.getCategoryId() + "_1";
+//        redis.delete(key);
         return R.success("添加菜品成功");
     }
 
@@ -102,16 +113,27 @@ public class DishServiceImpl extends ServiceImpl<DishMapper, Dish> implements Di
         return R.success(dishDtoPage);
     }
     @Override
-    //用户查询
-    public R<List<DishDto>> SetmealList(Long id) {
+    //用户查询//Redis改造
+    public R<List<DishDto>> SetmealList(Long id, Integer status) {
         // http://localhost/dish/list?categoryId=1397844263642378242 GET 根据种类获取菜
+
+        //先创建一个键,由用户的id组成
+        String key = "dish_" + id + "_" + status;
+        //从Redis读取出来,然后判断是否为空;
+        String value = (String)redis.opsForValue().get(key);
+        //System.out.println(value);
+        List<DishDto> dtoList = JSON.parseArray(value, DishDto.class);
+        if(dtoList != null){
+            return R.success(dtoList);
+        }
+        //等于空就往下走
         LambdaQueryWrapper<Dish> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(Dish::getCategoryId, id);//添加条件，查询状态为1(起售状态）的菜品
         queryWrapper.eq(Dish::getStatus,1);
         //套餐中起售的菜品
         List<Dish> dishes = this.list(queryWrapper);//添加排序条件
         //添加风味;
-        List<DishDto> dtoList = new ArrayList<>();
+        dtoList = new ArrayList<>();
         dtoList = dishes.stream().map((oneDish)->{
             DishDto dishDto = new DishDto();
             BeanUtils.copyProperties(oneDish, dishDto);
@@ -121,7 +143,9 @@ public class DishServiceImpl extends ServiceImpl<DishMapper, Dish> implements Di
             dishDto.setFlavors(dishFlavorService.list(wrapper));
             return dishDto;
         }).collect(Collectors.toList());
-
+        //查询到了,就设置到Redis里面去
+        String redisList = JSON.toJSONString(dtoList);
+        redis.opsForValue().set(key, redisList, 60, TimeUnit.MINUTES);
         return R.success(dtoList);
     }
     @Override
@@ -157,7 +181,10 @@ public class DishServiceImpl extends ServiceImpl<DishMapper, Dish> implements Di
         //保存菜的信息
         dishFlavorService.saveBatch(flavors);
         this.updateById(dishDto);
-
+        Set keys = redis.keys("dish_*");
+        redis.delete(keys);
+//        String key = "dish" + dishDto.getCategoryId() + "_1";
+//        redis.delete(key);
         return R.success("修改成功");
     }
 
